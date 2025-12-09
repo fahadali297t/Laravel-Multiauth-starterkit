@@ -26,21 +26,22 @@ class LoginController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        $this->ensureIsNotRateLimited($request);
-
         if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey($request));
-
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey($request));
-
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        // Redirect based on role
+        $user = Auth::user();
+
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->route('dashboard');
     }
 
     public function destroy(Request $request): RedirectResponse
